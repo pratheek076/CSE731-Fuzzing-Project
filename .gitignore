@@ -53,3 +53,12 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# AFL++ Fuzzing Artifacts
+out/
+*.out
+core
+
+# Compiled Binaries
+fuzz_target
+*.o
