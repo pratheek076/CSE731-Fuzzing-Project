@@ -62,7 +62,7 @@ Docker Desktop installed on your machine.
 * docker run -ti -v "$(pwd)":/src aflplusplus/aflplusplus
 
 4. For Windows (PowerShell):
-* docker run -ti -v "${PWD}:/src" aflplusplus/aflplusplus
+* docker run -ti --rm -v "$(pwd)":/src aflplusplus/aflplusplus
 
 5. Compile cJSON and harness with AFL instrumentation + ASAN 
 Inside the Docker container, run:
