@@ -59,10 +59,10 @@ Docker Desktop installed on your machine.
 2. Start the AFL++ Container Run the appropriate command for your OS from the project root directory to mount the current folder to /src:
 
 3. For macOS / Linux:
-* docker run -ti -v "$(pwd)":/src aflplusplus/aflplusplus
+* docker run -ti --rm -v "$(pwd)":/src aflplusplus/aflplusplus
 
 4. For Windows (PowerShell):
-* docker run -ti --rm -v "$(pwd)":/src aflplusplus/aflplusplus
+* docker run -ti --rm -v "${PWD}:/src" aflplusplus/aflplusplus
 
 5. Compile cJSON and harness with AFL instrumentation + ASAN 
 Inside the Docker container, run:
