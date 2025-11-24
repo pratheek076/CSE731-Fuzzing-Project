@@ -85,3 +85,16 @@ Navigate to the crashes folder
 
 View the content of the crash file (replace 'id:000...' with actual filename)
 * cat id:000000*
+
+### How to generate the crash report?
+* ./fuzz_target < out/default/crashes/id:000000*
+
+## Execute the following command to start the fuzzer with the dictionary enabled for faster crash discovery:
+* afl-fuzz -i in -o out -x dicts/crash_trigger.dict -- ./fuzz_target
+
+## Before running the fuzzer, remove the last generated out folder and executable file
+* rm -rf out
+* rm fuzz_target
+
+## To generate crash report for the specific crash file that was generated in crashes folder
+* ./fuzz_target < out/default/crashes/id:000000*

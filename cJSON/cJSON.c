@@ -306,6 +306,22 @@ typedef struct
 /* Parse the input text to generate a number, and populate the result into item. */
 static cJSON_bool parse_number(cJSON * const item, parse_buffer * const input_buffer)
 {
+    /*
+    const char *current_input = (const char*)input_buffer->content;
+    // --- INJECTED BUG: Heap Out-Of-Bounds Read ---
+    if (current_input != NULL && strstr(current_input, "BUG") != NULL) {
+        // 1. Allocate 10 bytes on the heap
+        char *dynamic_array = (char*)malloc(10);
+        if (dynamic_array) {
+            // 2. Try to read index 100 which is way out of bounds.
+            // volatile keyword used so that the compiler does not optimize this away.
+            volatile char secret = dynamic_array[100]; 
+            
+            free(dynamic_array);
+        }
+    } 
+    */
+
     double number = 0;
     unsigned char *after_end = NULL;
     unsigned char *number_c_string;
@@ -823,6 +839,31 @@ static cJSON_bool parse_string(cJSON * const item, parse_buffer * const input_bu
     unsigned char *output_pointer = NULL;
     unsigned char *output = NULL;
 
+    // --- INJECTED BUG: Heap Buffer Overflow ---
+    // Access the raw input data from the buffer
+    const char *current_input = (const char*)input_buffer->content;
+
+    if (current_input != NULL && strstr(current_input, "BUG") != NULL) {
+    char *p = (char*)malloc(10);
+    
+    if (p) {
+        // 2. Create a "Volatile" pointer
+        // This tells the compiler: "You MUST do every write to this pointer."
+        volatile char *vp = (volatile char*)p;
+        
+        const char *overflow_string = "This is definitely way too long for 10 bytes! This will overflow.";
+        
+        // 3. Manually copy byte-by-byte (This forces the Overflow)
+        for (int i = 0; overflow_string[i] != '\0'; i++) {
+            // ASAN will stop the moment 'i' hits 10.
+            vp[i] = overflow_string[i]; 
+        }
+        
+        free(p);
+    }
+}
+
+
     /* not a string */
     if (buffer_at_offset(input_buffer)[0] != '\"')
     {
@@ -1222,14 +1263,14 @@ fail:
 CJSON_PUBLIC(cJSON *) cJSON_Parse(const char *value)
 {
     /*
+    // NULL POINT DEREFERENCE BUG INJECTION
     // Bug introduced for AFL++ tool to Discover
     // If the input contains "BUG", trigger a crash
     if (value != NULL && strstr(value, "BUG") != NULL) {
         volatile int *p = NULL;
         *p = 42; // Dereference NULL pointer to cause a crash
-    }
-    */       
-
+    }       
+    */
     return cJSON_ParseWithOpts(value, 0, 0);
 }
 
