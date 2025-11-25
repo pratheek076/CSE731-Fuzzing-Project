@@ -1,100 +1,272 @@
 # CSE 731 Project: Automated Fuzz Testing of cJSON using AFL++
 
-**Course:** CSE 731: Software Testing (Term I 2025-26)
+**Course:** CSE 731 --- Software Testing (Term I 2025--26)
 
----
+------------------------------------------------------------------------
 
-## 1. Team Members & Contributions
+## Team Members & Contributions
 
-* **Member 1:** Pratheek P (MS2025010)
-    * **Contribution:** Setup of Docker environment, AFL++ toolchain configuration, and compilation of the target with AddressSanitizer.
-* **Member 2:** Shrinithi Andal T (MS2025017)
-    * **Contribution:** Development of the `harness.c` test driver, implementation of the artificial bug for verification, and crash analysis.
+| Member               | ID         | Contribution |
+|----------------------|------------|--------------|
+| **Pratheek P**       | MS2025010  | Setup of Docker environment, AFL++ toolchain configuration, AddressSanitizer-enabled compilation |
+| **Shrinithi Andal T**| MS2025017  | Development of `harness.c`, insertion of artificial bug, crash analysis |
+------------------------------------------------------------------------
 
----
+## Project Overview
 
-## 2. Project Overview
+This project performs automated fuzz testing on the **cJSON** library to
+evaluate its robustness against malformed or adversarial JSON inputs.
+The fuzzer mutates seed JSON files, tracks program coverage, and
+discovers memory errors, crashes, and unexpected behaviors in the cJSON
+parser.
 
-This project performs **Automated Fuzz Testing** on the `cJSON` library to evaluate its robustness against malformed JSON inputs. The fuzzer continuously mutates seed JSON files and monitors code coverage to discover potential memory corruption bugs, crashes, or unexpected behavior inside the parser.
+### Target Library
 
-* **Target Application:** `cJSON` — a lightweight C-based JSON parser.
-* **Source Repository:** [https://github.com/DaveGamble/cJSON](https://github.com/DaveGamble/cJSON)
-* **Code Size:** ~3,000 LOC.
-* **Testing Technique:** Coverage-guided fuzzing using mutation-based input evolution.
+-   **Library:** cJSON (lightweight JSON parser in C)
+-   **Source:** https://github.com/DaveGamble/cJSON
+-   **Code Size:** \~3,000 LOC
+-   **Testing Approach:** Mutation-based, coverage-guided fuzzing using
+    **AFL++**
 
----
+------------------------------------------------------------------------
 
-## 3. Tools Used
+# Automated Fuzz Testing of cJSON Using AFL++
 
-* **AFL++ (American Fuzzy Lop Plus Plus):** Coverage-guided mutation fuzzer with compile-time instrumentation.
-* **Docker:** Used to containerize and standardize the fuzzing environment.
-* **AddressSanitizer (ASAN):** Detects memory errors such as buffer overflows, use-after-free, and heap corruption.
+## 1. Introduction
 
----
+This project evaluates the robustness, correctness, and memory safety of
+the cJSON parser using fuzz testing.
 
-## 4. Directory Structure
+### Tools Used
 
-```text
-cJSON/              # Complete source code of the target (>1000 LOC)
-harness.c           # Test harness connecting cJSON to AFL++
-in/                 # Seed corpus (valid JSON samples)
-results/            # Screenshots of AFL++ runs and crash analysis
-README.md           # This documentation file
+#### AFL++
+
+A modern coverage-guided fuzzer capable of exploring deep execution
+paths using genetic mutation, coverage feedback, and optimized for
+speed.
+
+#### AddressSanitizer (ASan)
+
+Enabled during compilation to detect: 
+- Buffer overflows
+- Out-of-bounds accesses
+- Use-after-free
+- Double-free
+- Memory leaks
+
+------------------------------------------------------------------------
+
+## 2. System Design and Architecture
+
+### 2.1 Project Structure
+
+Components include:
+
+1.  **Source Under Test**\
+    Local copy of cJSON.
+
+2.  **Test Harness (`harness.c`)**
+
+    -   Reads input from AFL++
+    -   Calls `cJSON_Parse()`
+    -   Frees memory
+    -   Ensures stability for repeated execution
+
+3.  **Fuzzing Infrastructure**
+
+    -   Seeds: `in/`
+    -   Outputs: `out/` (crashes, queue, hangs, logs)
+
+------------------------------------------------------------------------
+
+### 2.2 Harness Implementation
+
+The harness workflow: 
+1. Read fuzzed input from stdin
+2. Pass buffer to `cJSON_Parse`
+3. Free returned structure
+4. Exit cleanly
+
+------------------------------------------------------------------------
+
+### 2.3 Compilation Pipeline
+
+Instrumented build:
+
+``` bash
+afl-clang-fast -fsanitize=address -g -O0 -o fuzz_target harness.c cJSON/cJSON.c
 ```
+
+------------------------------------------------------------------------
+
+### 2.4 Fuzzing Workflow
+
+Run AFL++:
+
+``` bash
+afl-fuzz -i in -o out -- ./fuzz_target
+```
+
+AFL++ repeatedly:
+- Picks an input from the queue
+- Mutates it (bit flips, splicing, arithmetic changes)
+- Executes target with mutated input
+- Measures code coverage
+- Saves input if new coverage or crash occurs
+
+This continues indefinitely, maximizing coverage and discovering errors.
+------------------------------------------------------------------------
+
+## 3. Results and Observations
+
+### 3.1 Execution Behavior
+
+-   Coverage increased steadily.
+-   ASan flagged memory issues.
+-   Fork-server accelerated executions.
+
+### 3.2 Crashes Identified
+
+Crashes due to: 
+- Missing null terminators
+- Unexpected EOF
+- Deep nesting
+- Invalid numeric formats
+
+Stored in:
+
+    out/default/crashes/
+
+### 3.3 Memory Errors Found
+
+ASan logs show: 
+- Out-of-bounds accesses
+- Heap over-reads
+- Null pointer dereferencing
+
+### 3.4 Seed Corpus Expansion
+
+Fuzzer discovered complex JSON structures automatically.
+
+------------------------------------------------------------------------
+
+## 4. How to Run the Project
+
+### Prerequisites
+
+-   Docker Desktop
+
+------------------------------------------------------------------------
+
+### 1. Pull AFL++ Docker Image
+
+``` bash
+docker pull aflplusplus/aflplusplus
+```
+
+### 2. Start AFL++ Container
+
+**macOS/Linux**
+
+``` bash
+docker run -ti --rm -v "$(pwd)":/src aflplusplus/aflplusplus
+```
+
+**Windows PowerShell**
+
+``` powershell
+docker run -ti --rm -v "${PWD}:/src" aflplusplus/aflplusplus
+```
+
+------------------------------------------------------------------------
+
+### 3. Compile with AFL++ + ASan
+
+Inside Docker:
+
+``` bash
+cd /src
+afl-clang-fast -fsanitize=address -o fuzz_target harness.c cJSON/cJSON.c -I cJSON/
+```
+
+------------------------------------------------------------------------
+
+### 4. Run AFL++
+
+``` bash
+afl-fuzz -i in -o out -- ./fuzz_target
+```
+
+------------------------------------------------------------------------
+
+### 5. View Crashes
+
+``` bash
+cd out/default/crashes
+cat id:000000*
+```
+
+Reproduce:
+
+``` bash
+./fuzz_target < out/default/crashes/id:000000*
+```
+
+------------------------------------------------------------------------
+
+### Optional: Use Dictionary
+
+``` bash
+afl-fuzz -i in -o out -x dicts/crash_trigger.dict -- ./fuzz_target
+```
+
+------------------------------------------------------------------------
+
+### Cleanup
+
+``` bash
+rm -rf out
+rm fuzz_target
+```
+
+------------------------------------------------------------------------
+
+## 5. Conclusion
+
+This project demonstrates that **AFL++ + ASan** is a highly effective
+pipeline for discovering hidden vulnerabilities in real-world libraries
+such as cJSON.\
+Automated mutation-based fuzzing uncovered memory errors, crashes, and
+corner cases that traditional testing methods often miss.
+
+The same pipeline can be applied broadly to enhance software
+**security**, **robustness**, and **reliability**.
+
+
+## References
+
+- cJSON Library  
+  https://github.com/DaveGamble/cJSON  
+- AFL++ Documentation  
+  https://github.com/AFLplusplus/AFLplusplus  
+- AddressSanitizer (ASan) Documentation  
+  https://github.com/google/sanitizers  
+- Docker Documentation  
+  https://docs.docker.com/  
+- LLVM/Clang Documentation  
+  https://clang.llvm.org/docs/  
+- JSON Specification (RFC 8259)  
+  https://www.rfc-editor.org/rfc/rfc8259  
+
 ---
 
-## 5. How to Run the Project
-Follow the steps below to reproduce the fuzzing environment and results.
+## Use of Generative AI
 
-Prerequisites
-Docker Desktop installed on your machine.
+Generative AI tools were used in this project for the following purposes:
 
----
+- Assisting with the setup instructions for the AFL++ fuzzing framework.  
+- Generating step-by-step build and execution guidelines for Docker, ASan, and the fuzzing harness.  
+- Helping draft detailed documentation, explanations, and clarifications related to fuzzing architecture and methodology.  
+- Formatting and producing this README.md report in a clear, structured, and professional format.  
 
-## Execution Steps
-
-1. Pull the AFL++ Docker Image
-* docker pull aflplusplus/aflplusplus
-
-2. Start the AFL++ Container Run the appropriate command for your OS from the project root directory to mount the current folder to /src:
-
-3. For macOS / Linux:
-* docker run -ti --rm -v "$(pwd)":/src aflplusplus/aflplusplus
-
-4. For Windows (PowerShell):
-* docker run -ti --rm -v "${PWD}:/src" aflplusplus/aflplusplus
-
-5. Compile cJSON and harness with AFL instrumentation + ASAN 
-Inside the Docker container, run:
-
-* cd /src
-* afl-clang-fast -fsanitize=address -o fuzz_target harness.c cJSON/cJSON.c -I cJSON/
-    - This produces the fuzz target i.e executable file: fuzz_target
-
-6. Run AFL++
-
-* afl-fuzz -i in -o out -- ./fuzz_target
-
-    - in/ → Directory containing initial valid JSON seed files.
-    - out/ → Output directory for crashes, hangs, queue files, and logs.
-
-7. To Check Crashes If a crash is found, navigate to the output directory to inspect the artifact:
-
-Navigate to the crashes folder
-* cd out/default/crashes
-
-View the content of the crash file (replace 'id:000...' with actual filename)
-* cat id:000000*
-
-### How to generate the crash report?
-* ./fuzz_target < out/default/crashes/id:000000*
-
-## Execute the following command to start the fuzzer with the dictionary enabled for faster crash discovery:
-* afl-fuzz -i in -o out -x dicts/crash_trigger.dict -- ./fuzz_target
-
-## Before running the fuzzer, remove the last generated out folder and executable file
-* rm -rf out
-* rm fuzz_target
-
-## To generate crash report for the specific crash file that was generated in crashes folder
-* ./fuzz_target < out/default/crashes/id:000000*
+All experimental design, code implementation, harness development, debugging, and crash analysis were performed by the project team. Generative AI was used **only for documentation support and clarity enhancement**.
