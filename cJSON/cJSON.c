@@ -306,10 +306,9 @@ typedef struct
 /* Parse the input text to generate a number, and populate the result into item. */
 static cJSON_bool parse_number(cJSON * const item, parse_buffer * const input_buffer)
 {
-    /*
     const char *current_input = (const char*)input_buffer->content;
     // --- INJECTED BUG: Heap Out-Of-Bounds Read ---
-    if (current_input != NULL && strstr(current_input, "BUG") != NULL) {
+    if (current_input != NULL && strstr(current_input, "BUG1") != NULL) {
         // 1. Allocate 10 bytes on the heap
         char *dynamic_array = (char*)malloc(10);
         if (dynamic_array) {
@@ -319,8 +318,7 @@ static cJSON_bool parse_number(cJSON * const item, parse_buffer * const input_bu
             
             free(dynamic_array);
         }
-    } 
-    */
+    }
 
     double number = 0;
     unsigned char *after_end = NULL;
@@ -843,7 +841,7 @@ static cJSON_bool parse_string(cJSON * const item, parse_buffer * const input_bu
     // Access the raw input data from the buffer
     const char *current_input = (const char*)input_buffer->content;
 
-    if (current_input != NULL && strstr(current_input, "BUG") != NULL) {
+    if (current_input != NULL && strstr(current_input, "BUG3") != NULL) {
     char *p = (char*)malloc(10);
     
     if (p) {
@@ -1262,15 +1260,15 @@ fail:
 /* Default options for cJSON_Parse */
 CJSON_PUBLIC(cJSON *) cJSON_Parse(const char *value)
 {
-    /*
+    
     // NULL POINT DEREFERENCE BUG INJECTION
     // Bug introduced for AFL++ tool to Discover
     // If the input contains "BUG", trigger a crash
-    if (value != NULL && strstr(value, "BUG") != NULL) {
+    if (value != NULL && strstr(value, "BUG2") != NULL) {
         volatile int *p = NULL;
         *p = 42; // Dereference NULL pointer to cause a crash
     }       
-    */
+    
     return cJSON_ParseWithOpts(value, 0, 0);
 }
 
