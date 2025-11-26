@@ -4,23 +4,21 @@
 #include <string.h>
 #include "cJSON/cJSON.h"
 
-// Define a max buffer size (64KB is plenty for JSON)
+// Define a max buffer size (64KB is enough for JSON)
 #define BUFFER_SIZE 65536
 
 int main(int argc, char **argv) {
-    // 1. Allocate memory once (Optimization)
+    // 1. Allocate memory once.
     char *buf = (char*)malloc(BUFFER_SIZE);
     if (!buf) return 1;
 
-    // 2. AFL Persistent Loop
-    // This instructs AFL to re-run this loop 10,000 times per process
-    // instead of restarting the program every time.
+    // 2. AFL Persistent Loop.
     while (__AFL_LOOP(10000)) {
         
         // 3. Clear the buffer
         memset(buf, 0, BUFFER_SIZE);
         
-        // 4. Read Input from Stdin (AFL sends data here by default)
+        // 4. Read Input from Stdin.
         // file descriptor 0 is always Stdin
         ssize_t bytes_read = read(0, buf, BUFFER_SIZE);
         

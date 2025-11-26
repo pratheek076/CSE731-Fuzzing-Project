@@ -11,7 +11,11 @@
 | **Pratheek P**       | MS2025010  | Setup of Docker environment, AFL++ toolchain configuration, AddressSanitizer-enabled compilation |
 | **Shrinithi Andal T**| MS2025017  | Development of `harness.c`, insertion of artificial bug, crash analysis |
 ------------------------------------------------------------------------
+## Github repository
 
+https://github.com/pratheek076/CSE731-Fuzzing-Project
+
+------------------------------------------------------------------------
 ## Project Overview
 
 This project performs automated fuzz testing on the **cJSON** library to
